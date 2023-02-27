@@ -44,12 +44,14 @@ class AutopilotWidget(QWidget):
 
         self._video_sub = None
         self._video_msg = None
-        self._video_sub_stamp = None
+        self._video_sub_stamp = rospy.Time.now()
         self._cv_bridge = CvBridge()
+        self.video_flag = False
 
         self._pose_sub = None
         self._pose_msg = None
-        self._pose_sub_stamp = None
+        self._pose_sub_stamp = rospy.Time.now()
+        self.pose_flag = False
 
         self.label_pose_content_1 = 'Pose(ryp): not available'
         self.label_pose_content_2 = 'Pose(ryp): not available'
@@ -71,11 +73,13 @@ class AutopilotWidget(QWidget):
 
 
     def video_sub_cb(self, msg):
+        self.video_flag = True
         self._video_msg = self._cv_bridge.imgmsg_to_cv2(msg, "bgr8")
         self._video_sub_stamp = rospy.Time.now()
 
     
     def pose_sub_cb(self, msg):
+        self.pose_flag = True
         self._pose_msg = msg
         self._pose_sub_stamp = rospy.Time.now()
 
@@ -98,7 +102,7 @@ class AutopilotWidget(QWidget):
         self._send_setpoint_enu_pub = rospy.Publisher('/xtdrone/plane_0/cmd_pose_enu',Pose, queue_size=1)
         self._cmd_pub =rospy.Publisher('/xtdrone/plane_0/cmd',String,queue_size=1)
 
-        # self._video_sub = rospy.Subscriber('/xtdrone/plane_1/cmd_', Image, self.video_sub_cb, queue_size=10)
+        self._video_sub = rospy.Subscriber('/airsim_node/drone_1/front_center_custom/Scene', Image, self.video_sub_cb, queue_size=10)
         self._video_sub = None
         self._pose_sub = None
 
@@ -136,7 +140,8 @@ class AutopilotWidget(QWidget):
 
 
     def update_gui(self):
-        if (self._connected and self.video_available()):
+        # if (self._connected):
+        if (self._connected and self.video_available() and self.video_flag):
             frame = cv2.cvtColor(self._video_msg, cv2.COLOR_BGR2RGB)
             height, width, bytesPerComponent = frame.shape
             bytesPerLine = bytesPerComponent * width
@@ -144,7 +149,8 @@ class AutopilotWidget(QWidget):
                             QImage.Format_RGB888).scaled(self.ImageLabel_video.width(), self.ImageLabel_video.height())
             self.ImageLabel_video.setPixmap(QPixmap.fromImage(q_image)) 
         
-        if (self._connected and self.pose_available()):
+        # if (self._connected):
+        if (self._connected and self.pose_available() and self.pose_flag):
             self.label_pose_content_1 = self.label_pose_content_2
             self.label_pose_content_2 = self.label_pose_content_3
             self.label_pose_content_3 = self.label_pose_content_4
